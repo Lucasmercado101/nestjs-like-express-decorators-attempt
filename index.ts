@@ -1,11 +1,10 @@
 import "reflect-metadata";
 import Express, { NextFunction, Request, Response } from "express";
+import { BODY_PARAM, Get } from "./routeDecorators";
 
 const app = Express();
 
 app.use(Express.json());
-
-const BODY_PARAM = "body";
 
 const Body = (
   target: any,
@@ -20,57 +19,6 @@ const Body = (
   }
 };
 
-const Get =
-  (path: string) =>
-  (target: any, propertyKey: string | symbol, descriptor: any) => {
-    console.log("Begin GET decorator");
-
-    if (!target["getRoutes"]) {
-      target["getRoutes"] = [[propertyKey, path]];
-    } else {
-      target["getRoutes"].push([propertyKey, path]);
-    }
-
-    const toConvertVars = (target.toConvert ?? [])
-      .filter((x: string) => x[0] === propertyKey)
-      .sort((a: any, b: any) => a[2] - b[2])
-      .map((x: any) => x[1]);
-
-    const originalFn = descriptor.value;
-
-    // console.log(Reflect.getMetadata("design:paramtypes", target, propertyKey));
-
-    descriptor.value = async (
-      req: Request,
-      res: Response,
-      next: NextFunction
-    ) => {
-      console.log("Begin DESCRIPTOR FN");
-
-      let convertedVars: any = [];
-
-      if (toConvertVars.length > 0) {
-        for (const paramType of toConvertVars) {
-          switch (paramType) {
-            case BODY_PARAM:
-              convertedVars.push(req.body);
-              break;
-          }
-        }
-      }
-
-      try {
-        const toResp = await originalFn(...convertedVars);
-
-        console.log("Resing JSON");
-        res.json(toResp);
-      } catch (err) {
-        next(err);
-      }
-    };
-    console.log("End GET decorator");
-  };
-
 class Controller {
   constructor(protected router = Express.Router()) {
     this.assignRoutes(this);
@@ -82,8 +30,20 @@ class Controller {
 
   protected assignRoutes<T extends Controller>(child: T) {
     const prot = (child as any).__proto__;
-    for (const [fnName, path] of prot.getRoutes ?? []) {
-      this.router.get(path, prot[fnName]);
+    if (!prot.routes) throw new Error("No routes were assigned");
+
+    for (const [method, values] of Object.entries(prot.routes)) {
+      for (const [fnName, path, middlewares] of values as [
+        string,
+        string,
+        any[]
+      ]) {
+        if (middlewares && middlewares.length > 0) {
+          (this.router as any)[method](path, ...middlewares, prot[fnName]);
+        } else {
+          (this.router as any)[method](path, prot[fnName]);
+        }
+      }
     }
   }
 }
@@ -93,46 +53,22 @@ class CatsController extends Controller {
     super();
   }
 
-  @Get("/cats")
+  @Get("/cats", [
+    (_, __, next) => {
+      console.log("middleware running");
+      next();
+    }
+  ])
   public async getCats(@Body body: any): Promise<string> {
     console.log(body);
     console.log("in get cats");
-    return "a";
-  }
-
-  @Get("/cats-colors")
-  public async getDogs(@Body body: any): Promise<string> {
-    console.log(body);
-    console.log("in get dogs");
-    return "a";
-  }
-}
-
-class DogsController extends Controller {
-  constructor() {
-    super();
-  }
-
-  @Get("/dogs-color")
-  public async getCats(@Body body: any): Promise<string> {
-    console.log(body);
-    console.log("in get cats");
-    return "a";
-  }
-
-  @Get("/dogs")
-  public async getDogs(@Body body: any): Promise<string> {
-    console.log(body);
-    console.log("in get dogs");
     return "a";
   }
 }
 
 const catsController = new CatsController();
-const dogsController = new DogsController();
 
 app.use(catsController.getRouter);
-app.use(dogsController.getRouter);
 
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
