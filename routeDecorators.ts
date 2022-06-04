@@ -10,6 +10,7 @@ type methodName = string;
 type path = string;
 type parameterIndex = number;
 
+// Properties on the Request object
 export enum reqProperty {
   BODY_PARAM = "body"
 }
