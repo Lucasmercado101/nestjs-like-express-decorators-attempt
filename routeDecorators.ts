@@ -6,24 +6,43 @@ import {
   Router
 } from "express";
 
-export const BODY_PARAM = "body";
+type methodName = string;
+type path = string;
+type parameterIndex = number;
+
+export enum reqProperty {
+  BODY_PARAM = "body"
+}
+
+export type bodyToConvert = [methodName, reqProperty, parameterIndex];
+
+// "global" data stored in controller's prototype
+// accesed and saved into by the decorators
+export type protoData = {
+  routes: Partial<{
+    [key in keyof Router]: [methodName, path, RequestHandler[]?][];
+  }>;
+  bodyToConvert?: bodyToConvert[];
+};
 
 const RouterRESTMethodFactory =
   (method: keyof Router) =>
-  (path: string, middleware?: RequestHandler[]) =>
-  (target: any, propertyKey: string | symbol, descriptor: any) => {
-    if (!target["routes"]) {
-      target["routes"] = { [method]: [[propertyKey, path, middleware]] };
+  (path: path, middlewares?: RequestHandler[]) =>
+  (t: any, propertyKey: methodName, descriptor: any) => {
+    const target = t as protoData;
+
+    if (!target.routes) {
+      target.routes = { [method]: [[propertyKey, path, middlewares]] };
     } else {
-      target["routes"][method].push([propertyKey, path, middleware]);
+      target.routes[method]!.push([propertyKey, path, middlewares]);
     }
 
-    let toConvertVars: string[] = [];
+    let toConvertVars: reqProperty[] = [];
 
     // There are req. things to pass to the original fn
-    if (target.toConvert) {
-      toConvertVars = target.toConvert
-        .filter((x: string) => x[0] === propertyKey)
+    if (target.bodyToConvert) {
+      toConvertVars = target.bodyToConvert
+        .filter((x) => x[0] === propertyKey)
         // sort so they're passed in the right order
         .sort((a: any, b: any) => a[2] - b[2])
         .map((x: any) => x[1]);
@@ -44,7 +63,7 @@ const RouterRESTMethodFactory =
       if (toConvertVars.length > 0) {
         for (const paramType of toConvertVars) {
           switch (paramType) {
-            case BODY_PARAM:
+            case reqProperty.BODY_PARAM:
               convertedVars.push(req.body);
               break;
           }

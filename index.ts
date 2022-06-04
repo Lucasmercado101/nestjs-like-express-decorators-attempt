@@ -1,21 +1,24 @@
 import "reflect-metadata";
-import Express, { NextFunction, Request, Response } from "express";
-import { BODY_PARAM, Get } from "./routeDecorators";
+import Express from "express";
+import { bodyToConvert, Get, protoData, reqProperty } from "./routeDecorators";
 
 const app = Express();
 
 app.use(Express.json());
 
-const Body = (
-  target: any,
-  propertyKey: string,
-  parameterIndex: number
-): any => {
-  const entry = [propertyKey, BODY_PARAM, parameterIndex];
-  if (target["toConvert"]) {
-    target["toConvert"].push(entry);
+const Body = (t: any, propertyKey: string, parameterIndex: number): any => {
+  const target = t as protoData;
+
+  const entry: bodyToConvert = [
+    propertyKey,
+    reqProperty.BODY_PARAM,
+    parameterIndex
+  ];
+
+  if (target.bodyToConvert) {
+    target.bodyToConvert.push(entry);
   } else {
-    target["toConvert"] = [entry];
+    target.bodyToConvert = [entry];
   }
 };
 
