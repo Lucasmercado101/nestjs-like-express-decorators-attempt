@@ -6,9 +6,9 @@ import {
   Router
 } from "express";
 
-type methodName = string;
-type path = string;
-type parameterIndex = number;
+export type methodName = string;
+export type path = string;
+export type parameterIndex = number;
 
 // Properties on the Request object
 export enum reqProperty {
