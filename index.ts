@@ -1,12 +1,23 @@
 import "reflect-metadata";
 import Express from "express";
-import { bodyToConvert, Get, protoData, reqProperty } from "./routeDecorators";
+import {
+  bodyToConvert,
+  Get,
+  methodName,
+  parameterIndex,
+  protoData,
+  reqProperty
+} from "./routeDecorators";
 
 const app = Express();
 
 app.use(Express.json());
 
-const Body = (t: any, propertyKey: string, parameterIndex: number): any => {
+const Body = (
+  t: any,
+  propertyKey: methodName,
+  parameterIndex: parameterIndex
+): any => {
   const target = t as protoData;
 
   const entry: bodyToConvert = [
@@ -32,19 +43,16 @@ class Controller {
   }
 
   protected assignRoutes<T extends Controller>(child: T) {
-    const prot = (child as any).__proto__;
-    if (!prot.routes) throw new Error("No routes were assigned");
+    const proto = (child as any).__proto__;
+    const protoData = proto as protoData;
+    if (!protoData.routes) throw new Error("No routes were assigned");
 
-    for (const [method, values] of Object.entries(prot.routes)) {
-      for (const [fnName, path, middlewares] of values as [
-        string,
-        string,
-        any[]
-      ]) {
+    for (const [method, values] of Object.entries(protoData.routes)) {
+      for (const [fnName, path, middlewares] of values) {
         if (middlewares && middlewares.length > 0) {
-          (this.router as any)[method](path, ...middlewares, prot[fnName]);
+          (this.router as any)[method](path, ...middlewares, proto[fnName]);
         } else {
-          (this.router as any)[method](path, prot[fnName]);
+          (this.router as any)[method](path, proto[fnName]);
         }
       }
     }
