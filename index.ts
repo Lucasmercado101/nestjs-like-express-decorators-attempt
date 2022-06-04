@@ -53,12 +53,7 @@ class CatsController extends Controller {
     super();
   }
 
-  @Get("/cats", [
-    (_, __, next) => {
-      console.log("middleware running");
-      next();
-    }
-  ])
+  @Get("/cats")
   public async getCats(@Body body: any): Promise<string> {
     console.log(body);
     console.log("in get cats");

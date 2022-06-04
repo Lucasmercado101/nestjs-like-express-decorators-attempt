@@ -1,9 +1,15 @@
-import { Request, Response, NextFunction, RequestHandler } from "express";
+import {
+  Request,
+  Response,
+  NextFunction,
+  RequestHandler,
+  Router
+} from "express";
 
 export const BODY_PARAM = "body";
 
 const RouterRESTMethodFactory =
-  (method: string) =>
+  (method: keyof Router) =>
   (path: string, middleware?: RequestHandler[]) =>
   (target: any, propertyKey: string | symbol, descriptor: any) => {
     if (!target["routes"]) {
